@@ -51,12 +51,15 @@ if st.button("Kirim"):
         ...
     else:
         return "Data tidak tersedia"  # <- muncul di sini
+prompt = f"""
 Anda seorang analis forex ahli.
 Data terakhir {symbol} pada {last.datetime} UTC:
 Open: {last.open}, High: {last.high}, Low: {last.low}, Close: {last.close}
 RSI(14): {last.RSI:.2f}, EMA20: {last.EMA20:.5f}, SMA50: {last.SMA50:.5f}
-Berdasarkan ini, jawablah: {question}
+Berdasarkan data dan indikator di atas, jawablah:
+{question}
 """
+
         res = openai.ChatCompletion.create(
             model="gpt-4",
             messages=[
