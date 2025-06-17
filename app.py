@@ -4,7 +4,7 @@ warnings.filterwarnings("ignore", category=UserWarning)
 
 import requests, openai, pandas as pd, pandas_ta as ta, plotly.graph_objects as go
 
-# Cegah error pada pandas_ta yang memanggil squeeze_pro
+# Cegah error squeeze_pro
 try:
     import pandas_ta.momentum as mom
     if hasattr(mom, "squeeze_pro"):
@@ -12,11 +12,9 @@ try:
 except Exception:
     pass
 
-
-
 # Setup
 st.set_page_config(page_title="Forex AI Chat", page_icon=":money_with_wings:", layout="centered")
-#st.sidebar.image("assets/logo.png", width=120)
+# st.sidebar.image("assets/logo.png", width=120)  # pastikan logo ada, jika tidak bisa dimatikan
 st.sidebar.markdown("# Forex AI Chat\n_Tanyai seputar forex trading_")
 
 openai.api_key = st.secrets["OPENAI_API_KEY"]
@@ -43,22 +41,10 @@ question = st.text_area("Tanyakan forex...", height=100)
 chat_history = st.session_state.setdefault("history", [])
 
 if st.button("Kirim"):
-    def get_price(symbol):
-        url = f"https://api.twelvedata.com/time_series?symbol={symbol}&interval=1h&apikey={TWELVE_KEY}&outputsize=30&format=JSON"
-        response = requests.get(url)
-        data = response.json()
-
-        if "values" in data:
-            df = pd.DataFrame(data["values"])
-            df = df[::-1]  # balikkan agar urutan dari lama ke terbaru
-            df["datetime"] = pd.to_datetime(df["datetime"])
-            df = df.astype({"open": float, "high": float, "low": float, "close": float})
-            return df
-        else:
-            return None
-
-
-prompt = f"""
+    df = fetch_data(symbol)
+    if df is not None:
+        last = df.iloc[-1]
+        prompt = f"""
 Anda seorang analis forex ahli.
 Data terakhir {symbol} pada {last.datetime} UTC:
 Open: {last.open}, High: {last.high}, Low: {last.low}, Close: {last.close}
@@ -66,15 +52,16 @@ RSI(14): {last.RSI:.2f}, EMA20: {last.EMA20:.5f}, SMA50: {last.SMA50:.5f}
 Berdasarkan data dan indikator di atas, jawablah:
 {question}
 """
-
         res = openai.ChatCompletion.create(
             model="gpt-4",
             messages=[
-                {"role":"system","content":"Kamu adalah analis forex teknikal."},
-                {"role":"user","content":prompt}
+                {"role": "system", "content": "Kamu adalah analis forex teknikal."},
+                {"role": "user", "content": prompt}
             ], temperature=0.3)
         answer = res.choices[0].message.content
         chat_history.append({"q": question, "a": answer, "df": df})
+    else:
+        st.warning("Data tidak tersedia. Pastikan simbol forex benar dan API TwelveData aktif.")
 
 # tampil chat history & grafik
 for msg in chat_history:
