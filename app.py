@@ -44,17 +44,19 @@ chat_history = st.session_state.setdefault("history", [])
 
 if st.button("Kirim"):
     def get_price(symbol):
-    url = f"https://api.twelvedata.com/time_series?symbol={symbol}&interval=1h&apikey={TWELVE_KEY}&outputsize=30&format=JSON"
-    response = requests.get(url)
-    data = response.json()
-    if "values" in data:
-        df = pd.DataFrame(data["values"])
-        df = df[::-1]  # urutkan dari paling lama ke terbaru
-        df["datetime"] = pd.to_datetime(df["datetime"])
-        df = df.astype({"open": float, "high": float, "low": float, "close": float})
-        return df
-    else:
-        return None
+        url = f"https://api.twelvedata.com/time_series?symbol={symbol}&interval=1h&apikey={TWELVE_KEY}&outputsize=30&format=JSON"
+        response = requests.get(url)
+        data = response.json()
+
+        if "values" in data:
+            df = pd.DataFrame(data["values"])
+            df = df[::-1]  # balikkan agar urutan dari lama ke terbaru
+            df["datetime"] = pd.to_datetime(df["datetime"])
+            df = df.astype({"open": float, "high": float, "low": float, "close": float})
+            return df
+        else:
+            return None
+
 
 prompt = f"""
 Anda seorang analis forex ahli.
