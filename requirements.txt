@@ -3,7 +3,9 @@ requests
 openai
 pandas==2.2.2
 pandas-ta==0.3.14b0
+numpy
 plotly
 python-dotenv
-numpy
 setuptools
+matplotlib
+seaborn
