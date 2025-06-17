@@ -6,3 +6,4 @@ pandas-ta
 plotly
 python-dotenv
 setuptools
+numpy        # ← tambahkan baris ini
