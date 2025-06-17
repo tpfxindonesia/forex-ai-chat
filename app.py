@@ -43,12 +43,14 @@ question = st.text_area("Tanyakan forex...", height=100)
 chat_history = st.session_state.setdefault("history", [])
 
 if st.button("Kirim"):
-    df = fetch_data(symbol.replace("/",""))
-    if df is None:
-        st.error("Data tidak tersedia.")
+    def get_price(symbol):
+    url = f"https://api.twelvedata.com/time_series?symbol={symbol}&interval=1h&apikey={TWELVE_KEY}&outputsize=30&format=JSON"
+    response = requests.get(url)
+    data = response.json()
+    if "values" in data:
+        ...
     else:
-        last = df.iloc[-1]
-        prompt = f"""
+        return "Data tidak tersedia"  # <- muncul di sini
 Anda seorang analis forex ahli.
 Data terakhir {symbol} pada {last.datetime} UTC:
 Open: {last.open}, High: {last.high}, Low: {last.low}, Close: {last.close}
