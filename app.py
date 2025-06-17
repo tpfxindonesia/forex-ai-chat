@@ -1,17 +1,17 @@
 import streamlit as st
-#import warnings
-#warnings.filterwarnings("ignore")
-import requests, openai, pandas as pd, pandas_ta as ta, plotly.graph_objects as go
-from datetime import datetime
 import warnings
 warnings.filterwarnings("ignore", category=UserWarning)
 
-import pandas_ta as ta
-# Nonaktifkan squeeze_pro jika masih diimport otomatis
+import requests, openai, pandas as pd, pandas_ta as ta, plotly.graph_objects as go
+
+# Cegah error pada pandas_ta yang memanggil squeeze_pro
 try:
-    import pandas_ta.momentum as mom; del mom.squeeze_pro
+    import pandas_ta.momentum as mom
+    if hasattr(mom, "squeeze_pro"):
+        delattr(mom, "squeeze_pro")
 except Exception:
     pass
+
 
 
 # Setup
