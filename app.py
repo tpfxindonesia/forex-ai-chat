@@ -48,9 +48,14 @@ if st.button("Kirim"):
     response = requests.get(url)
     data = response.json()
     if "values" in data:
-        ...
+        df = pd.DataFrame(data["values"])
+        df = df[::-1]  # urutkan dari paling lama ke terbaru
+        df["datetime"] = pd.to_datetime(df["datetime"])
+        df = df.astype({"open": float, "high": float, "low": float, "close": float})
+        return df
     else:
-        return "Data tidak tersedia"  # <- muncul di sini
+        return None
+
 prompt = f"""
 Anda seorang analis forex ahli.
 Data terakhir {symbol} pada {last.datetime} UTC:
