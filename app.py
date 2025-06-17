@@ -1,8 +1,9 @@
 import streamlit as st
-import requests, openai, pandas as pd, pandas_ta as ta, plotly.graph_objects as go
-from datetime import datetime
 import warnings
 warnings.filterwarnings("ignore")
+import requests, openai, pandas as pd, pandas_ta as ta, plotly.graph_objects as go
+from datetime import datetime
+
 
 # Setup
 st.set_page_config(page_title="Forex AI Chat", page_icon=":money_with_wings:", layout="centered")
