@@ -16,7 +16,7 @@ except Exception:
 
 # Setup
 st.set_page_config(page_title="Forex AI Chat", page_icon=":money_with_wings:", layout="centered")
-st.sidebar.image("assets/logo.png", width=120)
+#st.sidebar.image("assets/logo.png", width=120)
 st.sidebar.markdown("# Forex AI Chat\n_Tanyai seputar forex trading_")
 
 openai.api_key = st.secrets["OPENAI_API_KEY"]
