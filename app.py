@@ -1,76 +1,55 @@
 import streamlit as st
-import warnings
-warnings.filterwarnings("ignore", category=UserWarning)
+import openai
+import os
+from dotenv import load_dotenv
+import requests
 
-import requests, openai, pandas as pd, pandas_ta as ta, plotly.graph_objects as go
+load_dotenv()
+openai.api_key = os.getenv("OPENAI_API_KEY")
 
-# Cegah error squeeze_pro
-try:
-    import pandas_ta.momentum as mom
-    if hasattr(mom, "squeeze_pro"):
-        delattr(mom, "squeeze_pro")
-except Exception:
-    pass
+def get_forex_price(pair="EUR/USD"):
+    base, quote = pair.split("/")
+    url = f"https://api.twelvedata.com/price?symbol={base}/{quote}&apikey={os.getenv('TWELVE_DATA_API_KEY')}"
+    response = requests.get(url)
+    data = response.json()
+    if "price" in data:
+        return float(data["price"])
+    return None
 
-# Setup
-st.set_page_config(page_title="Forex AI Chat", page_icon=":money_with_wings:", layout="centered")
-# st.sidebar.image("assets/logo.png", width=120)  # pastikan logo ada, jika tidak bisa dimatikan
-st.sidebar.markdown("# Forex AI Chat\n_Tanyai seputar forex trading_")
+st.set_page_config(page_title="Forex AI Chat", layout="wide")
+st.title("💬 Forex AI Chat")
+st.markdown("Tanyakan apa pun tentang trading forex")
 
-openai.api_key = st.secrets["OPENAI_API_KEY"]
-TWELVE_KEY = st.secrets["TWELVEDATA_API_KEY"]
+if "messages" not in st.session_state:
+    st.session_state.messages = []
 
-# utils
-@st.cache_data(ttl=300)
-def fetch_data(symbol):
-    url = "https://api.twelvedata.com/time_series"
-    params = {"symbol": symbol, "interval": "1h", "outputsize": 100, "apikey": TWELVE_KEY}
-    r = requests.get(url, params=params).json()
-    if "values" not in r: return None
-    df = pd.DataFrame(r["values"]).astype({"open":float,"high":float,"low":float,"close":float})
-    df["datetime"] = pd.to_datetime(df["datetime"])
-    df = df.sort_values("datetime")
-    df["RSI"] = ta.rsi(df["close"],14)
-    df["EMA20"] = ta.ema(df["close"],20)
-    df["SMA50"] = ta.sma(df["close"],50)
-    return df
+selected_pair = st.sidebar.selectbox("Pilih Pasangan Mata Uang", ["EUR/USD", "USD/JPY", "GBP/USD", "AUD/USD", "USD/CAD"])
+price = get_forex_price(selected_pair)
+if price:
+    st.sidebar.metric(label=f"Harga Saat Ini {selected_pair}", value=f"{price:.4f}")
+else:
+    st.sidebar.warning("Gagal mengambil data harga.")
 
-# UI
-symbol = st.sidebar.text_input("Pasangan Forex", "EUR/USD")
-question = st.text_area("Tanyakan forex...", height=100)
-chat_history = st.session_state.setdefault("history", [])
+for msg in st.session_state.messages:
+    with st.chat_message(msg["role"]):
+        st.markdown(msg["content"])
 
-if st.button("Kirim"):
-    df = fetch_data(symbol)
-    if df is not None:
-        last = df.iloc[-1]
-        prompt = f"""
-Anda seorang analis forex ahli.
-Data terakhir {symbol} pada {last.datetime} UTC:
-Open: {last.open}, High: {last.high}, Low: {last.low}, Close: {last.close}
-RSI(14): {last.RSI:.2f}, EMA20: {last.EMA20:.5f}, SMA50: {last.SMA50:.5f}
-Berdasarkan data dan indikator di atas, jawablah:
-{question}
-"""
-        res = openai.ChatCompletion.create(
-            model="gpt-4",
-            messages=[
-                {"role": "system", "content": "Kamu adalah analis forex teknikal."},
-                {"role": "user", "content": prompt}
-            ], temperature=0.3)
-        answer = res.choices[0].message.content
-        chat_history.append({"q": question, "a": answer, "df": df})
-    else:
-        st.warning("Data tidak tersedia. Pastikan simbol forex benar dan API TwelveData aktif.")
-
-# tampil chat history & grafik
-for msg in chat_history:
-    st.markdown(f"**Kamu:** {msg['q']}")
-    st.markdown(f"**AI:** {msg['a']}")
-    df = msg["df"]
-    fig = go.Figure(data=[go.Candlestick(x=df.datetime,
-                                         open=df.open, high=df.high,
-                                         low=df.low, close=df.close)])
-    fig.add_scatter(x=df.datetime, y=df.EMA20, name="EMA20", line=dict(color="cyan"))
-    fig.add_scatter(x=df.datetime, y=df.SMA50, name="SMA50", line=dict(color="magenta"))
-    st.plotly_chart(fig, use_container_width=True)
+user_input = st.chat_input("Tulis pertanyaanmu di sini...")
+if user_input:
+    st.session_state.messages.append({"role": "user", "content": user_input})
+    with st.chat_message("user"):
+        st.markdown(user_input)
+    with st.chat_message("assistant"):
+        with st.spinner("Sedang memproses..."):
+            forex_info = f"Harga saat ini untuk {selected_pair} adalah {price:.4f}." if price else ""
+            prompt = f"{forex_info}\n\nPertanyaan pengguna: {user_input}\n\nBerikan jawaban analitis dan edukatif seputar forex."
+            response = openai.ChatCompletion.create(
+                model="gpt-3.5-turbo",
+                messages=[
+                    {"role": "system", "content": "Kamu adalah asisten ahli forex yang memberikan wawasan dan analisis profesional."},
+                    {"role": "user", "content": prompt},
+                ]
+            )
+            reply = response.choices[0].message["content"]
+            st.markdown(reply)
+            st.session_state.messages.append({"role": "assistant", "content": reply})
